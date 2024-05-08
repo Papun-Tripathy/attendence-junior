@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/route_manager.dart';
 import 'package:test_fingerprint/create_class_page.dart';
+import 'package:test_fingerprint/homepage.dart';
 import 'package:test_fingerprint/login_page.dart';
 
 
@@ -16,7 +17,8 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return GetMaterialApp(
       debugShowCheckedModeBanner: false,
-      home: ClassAttendenceCreatePage(),
+      // home: LoginPage(),
+      home: HomePage(),
     );
   }
 }

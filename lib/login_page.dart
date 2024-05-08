@@ -1,8 +1,10 @@
 import 'dart:io';
-
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/route_manager.dart';
+
+import 'package:unique_identifier/unique_identifier.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -14,23 +16,25 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+  final LocalAuthentication auth = LocalAuthentication();
+  bool sucessfulLogin = false;
+  late Position? pos;
+  List<Map<String, dynamic>>? allClasses;
+
   @override
   void initState() {
     initiateAuth();
     super.initState();
   }
 
-  final LocalAuthentication auth = LocalAuthentication();
-  bool sucessfulLogin = false;
-  late Position? pos;
-
   initiateAuth() async {
-    
+    getAllClass();
+
     final bool canAuthenticateWithBiometrics = await auth.canCheckBiometrics;
-    print(canAuthenticateWithBiometrics);
+
     final bool canAuthenticate =
         canAuthenticateWithBiometrics || await auth.isDeviceSupported();
-    print(canAuthenticate);
+
     setState(() {});
     try {
       final bool didAuthenticate = await auth.authenticate(
@@ -38,7 +42,7 @@ class _LoginPageState extends State<LoginPage> {
         options:
             const AuthenticationOptions(biometricOnly: true, stickyAuth: true),
       );
-      if(!didAuthenticate ){
+      if (!didAuthenticate) {
         exit(0);
       }
       setState(() {
@@ -89,42 +93,114 @@ class _LoginPageState extends State<LoginPage> {
     return await Geolocator.getCurrentPosition();
   }
 
-  createNewClass() {
-    CollectionReference classes =
-        FirebaseFirestore.instance.collection('classes');
-    classes.add({"isActive": true, "createdAt": FieldValue.serverTimestamp()});
+  enrollYourAttendence(Map<String, dynamic> obj) async {
+    // if already exists
+    DocumentSnapshot<Map<String, dynamic>> docExists = await FirebaseFirestore
+        .instance
+        .collection('classes')
+        .doc(obj['id'])
+        .collection("Attendence")
+        .doc(await UniqueIdentifier.serial)
+        .get();
+
+    if (docExists.exists) {
+      return;
+    }
+    // DocumentReference obj;
+    await FirebaseFirestore.instance
+        .collection('classes')
+        .doc(obj['id'])
+        .collection("Attendence")
+        .doc(await UniqueIdentifier.serial)
+        .set({
+      "createdAt": FieldValue.serverTimestamp(),
+      "location": {
+        "altitude": pos?.altitude ?? 0,
+        "latitude": pos?.latitude ?? 0,
+        "longitude": pos?.longitude ?? 0,
+        "time": pos?.timestamp,
+      }
+    });
+    getAllClass();
   }
 
-  registerForClass(
-    String classId,
-    String deviceId,
-  ) {
-    CollectionReference classes =
-        FirebaseFirestore.instance.collection('classes');
-    DocumentReference cls = classes.doc(classId);
-
-    classes.snapshots().listen((event) {
-      print(event.docs);
+  getAllClass() async {
+    await FirebaseFirestore.instance
+        .collection('classes')
+        .snapshots()
+        .listen((event) {
+      List<QueryDocumentSnapshot<Map<String, dynamic>>> allData = event.docs;
+      setState(() {
+        allClasses = allData.map((atd) {
+          String id = atd.id;
+          Map<String, dynamic> data = atd.data();
+          print(data);
+          return {"id": id, ...data};
+        }).toList();
+        print(allClasses != null);
+      });
     });
   }
+
+  
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(),
       body: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14),
         width: double.infinity,
         child: Column(
           children: [
-            if (sucessfulLogin)
-              Column(
-                children: [
-                  TextButton(
-                      onPressed: createNewClass,
-                      child: Text("start Attendence"))
-                ],
+            if (!sucessfulLogin) const CircularProgressIndicator(),
+            const SizedBox(height: 10),
+            if (allClasses != null && allClasses!.isNotEmpty)
+              Expanded(
+                child: ListView.builder(
+                  itemCount: allClasses!.length,
+                  itemBuilder: (context, index) {
+                    Map<String, dynamic> data = allClasses![index];
+                    print(data['id']);
+                    String date =
+                        (data["createdAt"] as Timestamp).toDate().toString();
+
+                    return Container(
+                      padding: const EdgeInsets.all(10),
+                      margin: const EdgeInsets.symmetric(vertical: 3),
+                      decoration: BoxDecoration(
+                          border: Border.all(color: Colors.black),
+                          borderRadius: BorderRadius.circular(6)),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              Text(data["className"]),
+                              Spacer(),
+                            
+                              if (data["isActive"])
+                                ElevatedButton(
+                                    onPressed: () => enrollYourAttendence(data),
+                                    child: const Text("Mark Present"))
+                              else
+                                Text("Attendence Session Over")
+                            ],
+                          ),
+                          Row(
+                            children: [
+                              Text("Created At"),
+                              Spacer(),
+                              Text(date.split(":")[0]),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          
+                        ],
+                      ),
+                    );
+                  },
+                ),
               ),
-            const CircularProgressIndicator()
           ],
         ),
       ),
