@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "533738593546",
+    "project_id": "smart-auth-mca-igit",
+    "storage_bucket": "smart-auth-mca-igit.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:533738593546:android:9f0ca6ef90342c4cc16ef3",
+        "android_client_info": {
+          "package_name": "com.example.test_fingerprint"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDXNSxQmsjMJRRDniw6K6NW8O2_0TI-m8Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
